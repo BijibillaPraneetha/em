@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Finder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        #searchInput, button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px;
+        }
+
+        #results {
+            margin-top: 20px;
+        }
+
+        .book {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #eaeaea;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        textarea, input[type="number"] {
+            padding: 8px;
+            margin: 10px 0;
+            width: 100%;
+            max-width: 300px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        #reviewForm {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Book Finder</h1>
+    
+    <!-- Search bar for books -->
+    <input type="text" id="searchInput" placeholder="Search for books" />
+    <button onclick="searchBooks()">Search</button>
+    
+    <!-- Results Section -->
+    <div id="results"></div>
+    
+    <!-- Review Section -->
+    <div id="reviewForm" style="display: none;">
+        <h2>Submit Review</h2>
+        <textarea id="reviewText" placeholder="Write your review"></textarea>
+        <input type="number" id="rating" placeholder="Rating (1-5)" min="1" max="5" />
+        <button onclick="submitReview()">Submit Review</button>
+    </div>
+
+    <script>
+        async function searchBooks() {
+            const query = document.getElementById("searchInput").value;
+            const resultsDiv = document.getElementById("results");
+            resultsDiv.innerHTML = ""; // Clear previous results
+
+            try {
+                const response = await fetch(`/api/books?query=${encodeURIComponent(query)}`);
+                const books = await response.json();
+
+                if (books.length === 0) {
+                    resultsDiv.innerHTML = "No books found.";
+                    return;
+                }
+
+                books.forEach(book => {
+                    const bookDiv = document.createElement("div");
+                    bookDiv.className = "book";
+                    bookDiv.innerHTML = `
+                        <h3>${book.volumeInfo.title}</h3>
+                        <p>Authors: ${book.volumeInfo.authors ? book.volumeInfo.authors.join(", ") : "N/A"}</p>
+                        <button onclick="showReviewForm('${book.id}')">Submit Review</button>
+                    `;
+                    resultsDiv.appendChild(bookDiv);
+                });
+            } catch (error) {
+                console.error(error);
+                resultsDiv.innerHTML = "An error occurred while fetching books.";
+            }
+        }
+
+        function showReviewForm(bookId) {
+            document.getElementById("reviewForm").style.display = "block";
+            document.getElementById("reviewForm").setAttribute('data-book-id', bookId);
+        }
+
+        async function submitReview() {
+            const reviewText = document.getElementById("reviewText").value;
+            const rating = document.getElementById("rating").value;
+            const bookId = document.getElementById("reviewForm").getAttribute('data-book-id');
+            
+            if (!reviewText || !rating) {
+                alert("Please fill in all fields.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/reviews', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ bookId, reviewText, rating })
+                });
+
+                const result = await response.json();
+                alert(result.message || "Review submitted successfully!");
+                document.getElementById("reviewForm").reset();
+            } catch (error) {
+                console.error(error);
+                alert("Error submitting review.");
+            }
+        }
+    </script>
+</body>
+</html>
